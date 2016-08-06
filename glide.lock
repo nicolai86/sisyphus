@@ -1,6 +1,28 @@
-hash: 25297bdc929db27c130f22474bf87bafe9ce4ea404f9c784ee3ce538f517ea0d
-updated: 2016-08-05T16:19:42.630823002+02:00
+hash: 0fc428c7b207117426dc9e9b3e97971f57620059e218865d8a6fe79fbbfdbef9
+updated: 2016-08-06T16:09:16.447452793+02:00
 imports:
+- name: github.com/docker/engine-api
+  version: 0df83fcc24fb4a997df5537526306fb55aa5dca8
+  subpackages:
+  - client
+  - types/container
+  - client/transport
+  - client/transport/cancellable
+  - types
+  - types/filters
+  - types/network
+  - types/registry
+  - types/time
+  - types/blkiodev
+  - types/strslice
+- name: github.com/docker/go-connections
+  version: 990a1a1a70b0da4c4cb70e117971a4f0babfbf1a
+  subpackages:
+  - sockets
+  - tlsconfig
+  - nat
+- name: github.com/docker/go-units
+  version: f2d77a61e3c169b43402a0a1e84f06daf29b8190
 - name: github.com/golang/protobuf
   version: c3cefd437628a0b7d31b34fe44b3a7a540e98527
   subpackages:
@@ -14,16 +36,29 @@ imports:
   subpackages:
   - query
 - name: github.com/libgit2/git2go
-  version: f720800b507b72c0d64cdae70e2058bc620adc24
+  version: 1670c49c7e02ba38aa10072a102a33c3e6d5e1c3
+- name: github.com/Microsoft/go-winio
+  version: ce2922f643c8fd76b46cadc7f404a06282678b34
+- name: github.com/opencontainers/runc
+  version: 142df3836b740af53dc6da59eed8dbc92f62917c
+  subpackages:
+  - libcontainer/user
+- name: github.com/Sirupsen/logrus
+  version: a283a10442df8dc09befd873fab202bf8a253d6a
 - name: golang.org/x/net
-  version: 7c62cfdcccc65f87b0120ec841012ba816fc1aec
+  version: 075e191f18186a8ff2becaf64478e30f4545cdad
   subpackages:
   - context
+  - proxy
 - name: golang.org/x/oauth2
   version: 04e1573abc896e70388bd387a69753c378d46466
   subpackages:
-  - github
   - internal
+- name: golang.org/x/sys
+  version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
+  subpackages:
+  - windows
+  - unix
 - name: google.golang.org/appengine
   version: f21d98e7aefbf9ff4d5eeba05d7a925cc7ac20c3
   subpackages:

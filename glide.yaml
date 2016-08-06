@@ -5,3 +5,7 @@ import:
 - package: github.com/google/go-github
   subpackages:
   - github
+- package: github.com/docker/engine-api
+  version: ^0.3.3
+- package: github.com/docker/go-units
+  version: v0.3.1
