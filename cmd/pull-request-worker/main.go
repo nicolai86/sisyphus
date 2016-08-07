@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/go-github/github"
 	git "github.com/libgit2/git2go"
-	"github.com/nicolai86/greenkeepr/storage"
+	"github.com/nicolai86/sisyphus/storage"
 )
 
 var (

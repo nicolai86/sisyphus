@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/google/go-github/github"
-	"github.com/nicolai86/greenkeepr/storage"
-	"github.com/nicolai86/greenkeepr/uuid"
+	"github.com/nicolai86/sisyphus/storage"
+	"github.com/nicolai86/sisyphus/uuid"
 	"golang.org/x/oauth2"
 )
 

@@ -1,4 +1,4 @@
-package: github.com/nicolai86/greenkeepr
+package: github.com/nicolai86/sisyphus
 import:
 - package: golang.org/x/oauth2
 - package: github.com/libgit2/git2go
