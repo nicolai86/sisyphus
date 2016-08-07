@@ -13,12 +13,14 @@ import (
 
 var (
 	dataPath    string
+	natsURL     string
 	fileStorage storage.RepositoryReader
 	nc          *nats.Conn
 )
 
 func init() {
 	flag.StringVar(&dataPath, "data-path", "", "data directory")
+	flag.StringVar(&natsURL, "nats", "tcp://127.0.0.1:4222", "nats server URL")
 	flag.Parse()
 
 	fileStorage = storage.NewFileStorage(dataPath)
@@ -37,7 +39,7 @@ type repoConfig struct {
 func main() {
 	log.Printf("greenkeepr dependency worker running")
 
-	nc1, err := nats.Connect("tcp://127.0.0.1:4222")
+	nc1, err := nats.Connect(natsURL)
 	if err != nil {
 		log.Fatal(err)
 	}

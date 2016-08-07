@@ -14,12 +14,14 @@ import (
 )
 
 var (
+	natsURL     string
 	dataPath    string
 	fileStorage storage.RepositoryReaderWriter
 )
 
 func init() {
 	flag.StringVar(&dataPath, "data-path", "", "path to store data")
+	flag.StringVar(&natsURL, "nats", "tcp://127.0.0.1:4222", "nats server URL")
 	flag.Parse()
 
 	fileStorage = storage.NewFileStorage(dataPath)
@@ -134,7 +136,7 @@ func prepareAllRepos() {
 func main() {
 	log.Printf("greenkeepr repo worker running")
 
-	nc, err := nats.Connect("tcp://127.0.0.1:4222")
+	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -50,6 +50,7 @@ type loggedIndexData struct {
 }
 
 var (
+	natsURL               string
 	templatePath          string
 	fileStorage           storage.RepositoryReaderWriter
 	temporaryAccessTokens map[string]string
@@ -195,6 +196,7 @@ func init() {
 	var dataPath string
 	flag.StringVar(&templatePath, "template-path", "", "path to templates")
 	flag.StringVar(&dataPath, "data-path", "", "path to store data")
+	flag.StringVar(&natsURL, "nats", "tcp://127.0.0.1:4222", "nats server URL")
 	flag.Parse()
 
 	fileStorage = storage.NewFileStorage(dataPath)
@@ -213,7 +215,7 @@ func init() {
 func main() {
 	log.Printf("greenkeepr server listening")
 
-	nc, err := nats.Connect("tcp://127.0.0.1:4222")
+	nc, err := nats.Connect(natsURL)
 	if err != nil {
 		log.Fatal(err)
 	}
