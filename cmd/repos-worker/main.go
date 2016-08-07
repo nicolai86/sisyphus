@@ -93,10 +93,6 @@ func repoFrom(r storage.Repository) *git.Repository {
 		log.Fatal(err)
 	}
 
-	// repo.CheckoutHead(&git.CheckoutOpts{
-	// 	Strategy: git.CheckoutForce | git.CheckoutRemoveUntracked,
-	// })
-
 	return repo
 }
 
