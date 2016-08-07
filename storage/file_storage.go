@@ -34,7 +34,11 @@ func (f FileStorage) Store(r Repository) error {
 func (f FileStorage) Load() ([]Repository, error) {
 	var repos []Repository
 
-	err := filepath.Walk(f.DataDirectory, func(path string, _ os.FileInfo, _ error) error {
+	err := filepath.Walk(f.DataDirectory, func(path string, info os.FileInfo, _ error) error {
+		if info.IsDir() && path != f.DataDirectory {
+			return filepath.SkipDir
+		}
+
 		if strings.HasSuffix(path, ".json") {
 			file, err := os.Open(path)
 			if err != nil {

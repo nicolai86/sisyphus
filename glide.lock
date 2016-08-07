@@ -1,14 +1,14 @@
-hash: 0fc428c7b207117426dc9e9b3e97971f57620059e218865d8a6fe79fbbfdbef9
-updated: 2016-08-06T16:09:16.447452793+02:00
+hash: 15b6300052dac2c28f85afde95dceb1252470f41076677d2676b377da1dd3c62
+updated: 2016-08-07T15:52:34.398156769+02:00
 imports:
 - name: github.com/docker/engine-api
   version: 0df83fcc24fb4a997df5537526306fb55aa5dca8
   subpackages:
   - client
+  - types
   - types/container
   - client/transport
   - client/transport/cancellable
-  - types
   - types/filters
   - types/network
   - types/registry
@@ -39,6 +39,12 @@ imports:
   version: 1670c49c7e02ba38aa10072a102a33c3e6d5e1c3
 - name: github.com/Microsoft/go-winio
   version: ce2922f643c8fd76b46cadc7f404a06282678b34
+- name: github.com/nats-io/nats
+  version: fc85f44c1659ab6610d76fd6bd0e44ad2cadf697
+  subpackages:
+  - encoders/builtin
+- name: github.com/nats-io/nuid
+  version: a5152d67cf63cbfb5d992a395458722a45194715
 - name: github.com/opencontainers/runc
   version: 142df3836b740af53dc6da59eed8dbc92f62917c
   subpackages:

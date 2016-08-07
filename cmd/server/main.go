@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/github"
+	"github.com/nats-io/nats"
 	"github.com/nicolai86/sisyphus/storage"
 	"github.com/nicolai86/sisyphus/uuid"
 	"golang.org/x/oauth2"
@@ -212,6 +213,12 @@ func init() {
 func main() {
 	log.Printf("greenkeepr server listening")
 
+	nc, err := nats.Connect("tcp://127.0.0.1:4222")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer nc.Close()
+
 	srv := http.Server{
 		ReadTimeout:  4 * time.Second,
 		WriteTimeout: 6 * time.Second,
@@ -247,11 +254,13 @@ func main() {
 				} else {
 					repo.Plugins = []string{vals.Get("service")}
 				}
-				fmt.Printf("%#v\n", repo)
 
 				if err := fileStorage.Store(repo); err != nil {
 					log.Fatalf("Failed to store repo: %q\n", err)
 				}
+
+				nc.Publish("toggle-repository", []byte(repo.ID))
+				nc.Flush()
 
 				http.Redirect(w, req, "/", http.StatusFound)
 				return
