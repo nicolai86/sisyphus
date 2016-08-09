@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
@@ -283,75 +281,17 @@ func createPR(r storage.Repository, c config, branch string, modifications []str
 }
 
 func pushChangesToRemote(r storage.Repository, c config, buildPath string) string {
-	updatedPackage := fmt.Sprintf("%s/package.new.json", buildPath)
-	if _, err := os.Stat(updatedPackage); err != nil {
-		log.Fatalf("The updated package.new.json file is missing…\n")
-	}
-	branch := fmt.Sprintf("greenkeep/%x", md5.Sum([]byte(time.Now().String())))
-	log.Printf("Operating branch is %q\n", branch)
-
-	log.Printf("Cleaning current branch\n")
-	cmd := exec.Command("git", "clean", "-fd")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Fatalf("Unable to change branch: %q\n", err)
-	}
-
-	log.Printf("Ensuring we're on master\n")
-	cmd = exec.Command("git", "checkout", "master")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
+	owner := strings.Split(r.FullName, "/")[0]
+	repo := strings.Split(r.FullName, "/")[1]
+	branch, err := pr.PublishChanges(r.AccessToken, owner, repo, []pr.UpdateFile{
+		pr.UpdateFile{
+			Source:      fmt.Sprintf("%s/package.new.json", buildPath),
+			Destination: fmt.Sprintf("%s/package.json", c.Path),
+		},
+	})
+	if err != nil {
 		log.Fatal(err)
 	}
-
-	cmd = exec.Command("git", "checkout", "-b", branch)
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatalf("Unable to change branch: %q\n", err)
-	}
-
-	log.Printf("Moving new package.json into place\n")
-	if err := os.Rename(updatedPackage, fmt.Sprintf("/tmp/%s/%s/package.json", r.ID, c.Path)); err != nil {
-		log.Fatalf("Unable to move file: %q\n", err)
-	}
-
-	log.Printf("Adding package.json to stage\n")
-	cmd = exec.Command("git", "add", fmt.Sprintf("/tmp/%s/%s/package.json", r.ID, c.Path))
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Creating commit\n")
-	cmd = exec.Command("git", "commit", "-m", "'update js dependencies'")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Pushing to remote\n")
-	cmd = exec.Command("git", "push", "-f")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Reverting to master\n")
-	cmd = exec.Command("git", "checkout", "master")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
 	return branch
 }
 

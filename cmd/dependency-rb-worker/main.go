@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
@@ -232,92 +230,21 @@ func runDependencyCheck(r storage.Repository, c config, buildPath string) {
 }
 
 func pushChangesToRemote(r storage.Repository, c config, buildPath string) string {
-	updatedGemfile := fmt.Sprintf("%s/Gemfile", buildPath)
-	updatedGemfileLock := fmt.Sprintf("%s/Gemfile.lock", buildPath)
-	if _, err := os.Stat(updatedGemfile); err != nil {
-		log.Fatalf("The updated Gemfile file is missing…\n")
-	}
-	if _, err := os.Stat(updatedGemfileLock); err != nil {
-		log.Fatalf("The updated Gemfile.lock file is missing…\n")
-	}
-	branch := fmt.Sprintf("greenkeep/%x", md5.Sum([]byte(time.Now().String())))
-	log.Printf("Operating branch is %q\n", branch)
-
-	log.Printf("Cleaning current branch\n")
-	cmd := exec.Command("git", "clean", "-fd")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		log.Fatalf("Unable to change branch: %q\n", err)
-	}
-
-	log.Printf("Ensuring we're on master\n")
-	cmd = exec.Command("git", "checkout", "master")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
+	owner := strings.Split(r.FullName, "/")[0]
+	repo := strings.Split(r.FullName, "/")[1]
+	branch, err := pr.PublishChanges(r.AccessToken, owner, repo, []pr.UpdateFile{
+		pr.UpdateFile{
+			Source:      fmt.Sprintf("%s/Gemfile", buildPath),
+			Destination: fmt.Sprintf("%s/Gemfile", c.Path),
+		},
+		pr.UpdateFile{
+			Source:      fmt.Sprintf("%s/Gemfile.lock", buildPath),
+			Destination: fmt.Sprintf("%s/Gemfile.lock", c.Path),
+		},
+	})
+	if err != nil {
 		log.Fatal(err)
 	}
-
-	cmd = exec.Command("git", "checkout", "-b", branch)
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatalf("Unable to change branch: %q\n", err)
-	}
-
-	log.Printf("Moving new Gemfile into place\n")
-	if err := os.Rename(updatedGemfile, fmt.Sprintf("/tmp/%s/%s/Gemfile", r.ID, c.Path)); err != nil {
-		log.Fatalf("Unable to move file: %q\n", err)
-	}
-
-	log.Printf("Adding Gemfile to stage\n")
-	cmd = exec.Command("git", "add", fmt.Sprintf("/tmp/%s/%s/Gemfile", r.ID, c.Path))
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Moving new Gemfile into place\n")
-	if err := os.Rename(updatedGemfileLock, fmt.Sprintf("/tmp/%s/%s/Gemfile.lock", r.ID, c.Path)); err != nil {
-		log.Fatalf("Unable to move file: %q\n", err)
-	}
-
-	log.Printf("Adding Gemfile to stage\n")
-	cmd = exec.Command("git", "add", fmt.Sprintf("/tmp/%s/%s/Gemfile.lock", r.ID, c.Path))
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Creating commit\n")
-	cmd = exec.Command("git", "commit", "-m", "'update rb dependencies'")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Pushing to remote\n")
-	cmd = exec.Command("git", "push", "-f")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Reverting to master\n")
-	cmd = exec.Command("git", "checkout", "master")
-	cmd.Dir = fmt.Sprintf("/tmp/%s", r.ID)
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
-	}
-
 	return branch
 }
 
@@ -339,10 +266,6 @@ func hasPR(r storage.Repository, c config, modifications []string) bool {
 
 		return false
 	})
-}
-
-func stringPtr(str string) *string {
-	return &str
 }
 
 func createPR(r storage.Repository, c config, branch string, modifications []string) {
