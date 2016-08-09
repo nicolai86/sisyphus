@@ -22,7 +22,6 @@ import (
 	"github.com/nicolai86/sisyphus/github/pr"
 	"github.com/nicolai86/sisyphus/storage"
 	"golang.org/x/net/context"
-	"golang.org/x/oauth2"
 )
 
 var (
@@ -344,28 +343,20 @@ func stringPtr(str string) *string {
 }
 
 func createPR(r storage.Repository, c config, branch string, modifications []string) {
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: r.AccessToken},
-	)
-	tc := oauth2.NewClient(oauth2.NoContext, ts)
-	client := github.NewClient(tc)
-
 	owner := strings.Split(r.FullName, "/")[0]
 	repo := strings.Split(r.FullName, "/")[1]
-
 	out, _ := json.MarshalIndent(modifications, "", "\t")
-
-	client.PullRequests.Create(owner, repo, &github.NewPullRequest{
-		Title: stringPtr("Update your RB dependencies"),
-		Head:  stringPtr(branch),
-		Base:  stringPtr("master"),
-		Body: stringPtr(
-			fmt.Sprintf(
-				`This PR updates dependencies, which have not been covered by your versions so far: %s`,
-				fmt.Sprintf("\n\n ```\n# %s dependencies in %s\n%s\n```", c.Language, c.Path, out),
-			),
+	pr.CreatePullRequest(
+		r.AccessToken,
+		owner,
+		repo,
+		fmt.Sprintf("Update %s dependencies in %q", c.Language, c.Path),
+		branch,
+		fmt.Sprintf(
+			`This PR updates dependencies, which have not been covered by your versions so far: %s`,
+			fmt.Sprintf("\n\n ```\n# %s dependencies in %s\n%s\n```", c.Language, c.Path, out),
 		),
-	})
+	)
 }
 
 func main() {
