@@ -167,8 +167,6 @@ func checkDependencies(r storage.Repository, c config) {
 		f.Write(content)
 
 	}
-	f, _ := os.OpenFile(fmt.Sprintf("%s/%s", cachePath, "config.json"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 700)
-	json.NewEncoder(f).Encode(&c)
 
 	runDependencyCheck(r, c, cachePath)
 }

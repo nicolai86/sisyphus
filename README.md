@@ -29,6 +29,7 @@ $ go run cmd/repos-worker/main.go -data-path=$(pwd)/tmp
 # run dependency update worker
 $ go run cmd/dependency-worker/main.go -data-path=$(pwd)/tmp
 $ go run cmd/dependency-js-worker/main.go -data-path=$(pwd)/tmp
+$ go run cmd/dependency-rb-worker/parse.go cmd/dependency-rb-worker/main.go -data-path=$(pwd)/tmp
 
 # run scheduler 
 $ go run cmd/repo-schedule-worker/main.go -data-path=$(pwd)/tmp

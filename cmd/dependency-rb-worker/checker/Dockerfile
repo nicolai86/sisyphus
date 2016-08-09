@@ -7,4 +7,4 @@ USER checker
 
 RUN gem install bundle_outdated
 
-ENTRYPOINT ["bundle-outdated"]
+ENTRYPOINT bundle-outdated > outdated.log
