@@ -19,6 +19,7 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/libgit2/git2go"
 	"github.com/nats-io/nats"
+	"github.com/nicolai86/sisyphus/github/pr"
 	"github.com/nicolai86/sisyphus/storage"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
@@ -190,7 +191,7 @@ func runDependencyCheck(r storage.Repository, c config, buildPath string) {
 	for dep := range dependencies.Updates {
 		changedDependencies = append(changedDependencies, dep)
 	}
-	if hasPR(r, c, buildPath, changedDependencies) {
+	if hasPR(r, c, changedDependencies) {
 		log.Printf("%s has an open PR for %q\n", r.ID, changedDependencies)
 		return
 	}
@@ -318,36 +319,24 @@ func pushChangesToRemote(r storage.Repository, c config, buildPath string) strin
 	return branch
 }
 
-func hasPR(r storage.Repository, c config, buildPath string, modifications []string) bool {
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: r.AccessToken},
-	)
-	tc := oauth2.NewClient(oauth2.NoContext, ts)
-	client := github.NewClient(tc)
-
+func hasPR(r storage.Repository, c config, modifications []string) bool {
 	owner := strings.Split(r.FullName, "/")[0]
 	repo := strings.Split(r.FullName, "/")[1]
-	prs, _, _ := client.PullRequests.List(owner, repo, nil)
-
-	log.Printf("Inspecting %d PRs for overlaps…\n", len(prs))
-
-	for _, pr := range prs {
-		index := strings.Index(*pr.Body, fmt.Sprintf("``` dependencies\n# %s\n", c.Path))
+	return pr.PullRequestExists(r.AccessToken, owner, repo, func(pr *github.PullRequest) bool {
+		index := strings.Index(*pr.Body, fmt.Sprintf("```\n# %s dependencies in %s\n", c.Language, c.Path))
 		if index == -1 {
-			continue
+			return false
 		}
 
-		parts := strings.Split(strings.Split(*pr.Body, fmt.Sprintf("``` dependencies\n# %s\n", c.Path))[1], "```")[0]
+		parts := strings.Split(strings.Split(*pr.Body, fmt.Sprintf("```\n# %s dependencies in %s\n", c.Language, c.Path))[1], "```")[0]
 		for _, mod := range modifications {
 			if strings.Index(parts, mod) != -1 {
 				return true
 			}
 		}
-	}
 
-	log.Printf("%s has no open PRs for %q\n", r.ID, modifications)
-
-	return false
+		return false
+	})
 }
 
 func stringPtr(str string) *string {
@@ -373,7 +362,7 @@ func createPR(r storage.Repository, c config, branch string, modifications []str
 		Body: stringPtr(
 			fmt.Sprintf(
 				`This PR updates dependencies, which have not been covered by your versions so far: %s`,
-				fmt.Sprintf("\n\n ``` dependencies\n# %s\n%s\n```", c.Path, out),
+				fmt.Sprintf("\n\n ```\n# %s dependencies in %s\n%s\n```", c.Language, c.Path, out),
 			),
 		),
 	})
