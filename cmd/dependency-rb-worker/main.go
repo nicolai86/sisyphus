@@ -235,7 +235,10 @@ func pushChangesToRemote(r storage.Repository, c config, buildPath string) strin
 	updatedGemfile := fmt.Sprintf("%s/Gemfile", buildPath)
 	updatedGemfileLock := fmt.Sprintf("%s/Gemfile.lock", buildPath)
 	if _, err := os.Stat(updatedGemfile); err != nil {
-		log.Fatalf("The updated package.new.json file is missing…\n")
+		log.Fatalf("The updated Gemfile file is missing…\n")
+	}
+	if _, err := os.Stat(updatedGemfileLock); err != nil {
+		log.Fatalf("The updated Gemfile.lock file is missing…\n")
 	}
 	branch := fmt.Sprintf("greenkeep/%x", md5.Sum([]byte(time.Now().String())))
 	log.Printf("Operating branch is %q\n", branch)
