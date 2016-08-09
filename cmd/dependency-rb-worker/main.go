@@ -415,7 +415,7 @@ func main() {
 			return
 		}
 
-		checkDependencies(r, rc.Config)
+		go checkDependencies(r, rc.Config)
 	})
 	nc.Flush()
 
