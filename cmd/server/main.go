@@ -57,7 +57,7 @@ var (
 	conf                  *oauth2.Config
 )
 
-func allRepos(client *github.Client, accessToken string) []*github.Repository {
+func allRepos(client *github.Client) []*github.Repository {
 	var allRepos []*github.Repository
 	opt := &github.RepositoryListOptions{
 		ListOptions: github.ListOptions{PerPage: 25},
@@ -95,7 +95,7 @@ func allReposByOrg(client *github.Client, orgName string) []*github.Repository {
 	return allRepos
 }
 
-func allOrgs(client *github.Client, accessToken string) []*githubOrganization {
+func allOrgs(client *github.Client) []*githubOrganization {
 	var allOrgs []*githubOrganization
 	opt := &github.ListOptions{PerPage: 25}
 	for {
@@ -143,28 +143,29 @@ func renderAnonymousIndex(state string, w http.ResponseWriter) {
 }
 
 func renderSignedInIndex(accessToken string, w http.ResponseWriter) {
+	fmt.Printf("got token: %q\n", accessToken)
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: accessToken},
 	)
 	tc := oauth2.NewClient(oauth2.NoContext, ts)
 	client := github.NewClient(tc)
 
-	var repos = allRepos(client, accessToken)
-	var orgs = allOrgs(client, accessToken)
+	var repos = allRepos(client)
+	var orgs = allOrgs(client)
 
 	var data = loggedIndexData{
 		Organizations: orgs,
 		Repositories:  repos,
 	}
 
+	knownRepos, err := fileStorage.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	loggedInIndex, err := template.New("signed-in.tpl").Funcs(template.FuncMap{
 		"enabled": func(repoName, service string) bool {
-			repos, err := fileStorage.Load()
-			if err != nil {
-				return false
-			}
-
-			for _, repo := range repos {
+			for _, repo := range knownRepos {
 				if repo.FullName == repoName {
 					for _, plugin := range repo.Plugins {
 						if plugin == service {
@@ -194,12 +195,19 @@ func renderSignedInIndex(accessToken string, w http.ResponseWriter) {
 
 func init() {
 	var dataPath string
+	var bucket string
 	flag.StringVar(&templatePath, "template-path", "", "path to templates")
 	flag.StringVar(&dataPath, "data-path", "", "path to store data")
+	flag.StringVar(&bucket, "s3-bucket", "", "s3 storage bucket")
 	flag.StringVar(&natsURL, "nats", "tcp://127.0.0.1:4222", "nats server URL")
 	flag.Parse()
 
-	fileStorage = storage.NewFileStorage(dataPath)
+	if dataPath != "" {
+		fileStorage = storage.NewFileStorage(dataPath)
+	}
+	if bucket != "" {
+		fileStorage = storage.NewS3Storage(bucket)
+	}
 	temporaryAccessTokens = make(map[string]string)
 	conf = &oauth2.Config{
 		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
@@ -231,7 +239,7 @@ func main() {
 				if err != nil || c == nil {
 					renderAnonymousIndex("state", w)
 				} else {
-					if _, ok := temporaryAccessTokens[c.Value]; !ok {
+					if value, ok := temporaryAccessTokens[c.Value]; !ok || value == "" {
 						renderAnonymousIndex("state", w)
 					} else {
 						renderSignedInIndex(temporaryAccessTokens[c.Value], w)
@@ -300,6 +308,7 @@ func main() {
 				data.State = query.Get("state")
 
 				tok, err := conf.Exchange(oauth2.NoContext, data.Code)
+
 				// TODO compare state
 				if err != nil {
 					log.Fatal(err)
@@ -318,7 +327,7 @@ func main() {
 
 				temporaryAccessTokens[id] = tok.AccessToken
 
-				renderSignedInIndex(temporaryAccessTokens[id], w)
+				renderSignedInIndex(tok.AccessToken, w)
 				return
 			}
 		})),

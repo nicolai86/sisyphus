@@ -1,12 +1,17 @@
-hash: 15b6300052dac2c28f85afde95dceb1252470f41076677d2676b377da1dd3c62
-updated: 2016-08-07T15:52:34.398156769+02:00
+hash: 084805e76019caf6235b175f98697f9f405b1492f371be4a10f1b43e6bfcd657
+updated: 2016-08-12T16:56:54.154131971+02:00
 imports:
+- name: github.com/aws/aws-sdk-go
+  version: f80e7d0182a463dff0c0da6bbed57f21369d4346
+  subpackages:
+  - services/s3
 - name: github.com/docker/engine-api
   version: 0df83fcc24fb4a997df5537526306fb55aa5dca8
   subpackages:
   - client
   - types
   - types/container
+  - types/strslice
   - client/transport
   - client/transport/cancellable
   - types/filters

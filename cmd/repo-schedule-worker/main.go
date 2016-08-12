@@ -17,11 +17,18 @@ var (
 
 func init() {
 	var dataPath string
+	var bucket string
 	flag.StringVar(&dataPath, "data-path", "", "path to store data")
+	flag.StringVar(&bucket, "s3-bucket", "", "s3 storage bucket")
 	flag.StringVar(&natsURL, "nats", "tcp://127.0.0.1:4222", "nats server URL")
 	flag.Parse()
 
-	fileStorage = storage.NewFileStorage(dataPath)
+	if dataPath != "" {
+		fileStorage = storage.NewFileStorage(dataPath)
+	}
+	if bucket != "" {
+		fileStorage = storage.NewS3Storage(bucket)
+	}
 }
 
 func main() {
@@ -36,6 +43,8 @@ func main() {
 	for {
 		select {
 		case <-time.After(time.Second * 5):
+			// this is a horrible inefficient design, and it also leads to periods of extremly high
+			// and low usage.
 			repos, err := fileStorage.Load()
 			if err != nil {
 				log.Fatal(err)

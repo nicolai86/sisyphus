@@ -24,7 +24,6 @@ import (
 )
 
 var (
-	dataPath    string
 	natsURL     string
 	fileStorage storage.RepositoryReader
 	nc          *nats.Conn
@@ -41,11 +40,19 @@ type repoConfig struct {
 }
 
 func init() {
+	var dataPath string
+	var bucket string
+	flag.StringVar(&bucket, "s3-bucket", "", "s3 storage bucket")
 	flag.StringVar(&dataPath, "data-path", "", "data directory")
 	flag.StringVar(&natsURL, "nats", "tcp://127.0.0.1:4222", "nats server URL")
 	flag.Parse()
 
-	fileStorage = storage.NewFileStorage(dataPath)
+	if dataPath != "" {
+		fileStorage = storage.NewFileStorage(dataPath)
+	}
+	if bucket != "" {
+		fileStorage = storage.NewS3Storage(bucket)
+	}
 }
 
 var filesToExtract = []string{"Gemfile", "Gemfile.lock"}
@@ -249,12 +256,6 @@ func main() {
 				r = repo
 				break
 			}
-		}
-
-		configPath := fmt.Sprintf("%s/%s/%s.json", dataPath, "greenkeep", r.ID)
-		if _, err := os.Stat(configPath); err != nil {
-			log.Printf("%q does not exist. skipping", configPath)
-			return
 		}
 
 		go checkDependencies(r, rc.Config)

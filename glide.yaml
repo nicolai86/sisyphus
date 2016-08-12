@@ -8,3 +8,7 @@ import:
 - package: github.com/docker/go-units
 - package: github.com/nats-io/nats
 - package: github.com/nats-io/nuid
+- package: github.com/aws/aws-sdk-go
+  version: v1.4.1
+  subpackages:
+  - services/s3
