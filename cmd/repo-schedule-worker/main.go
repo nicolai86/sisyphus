@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"time"
@@ -43,7 +44,8 @@ func main() {
 			for _, repo := range repos {
 				for _, plugin := range repo.Plugins {
 					log.Printf("scheduling %q for %s\n", plugin, repo.ID)
-					nc.Publish(plugin, []byte(repo.ID))
+					out, _ := json.Marshal(repo)
+					nc.Publish(plugin, out)
 				}
 				nc.Flush()
 			}

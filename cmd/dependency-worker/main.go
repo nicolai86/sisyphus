@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
-	"os"
+	"net/http"
+	"strings"
 
 	"github.com/nats-io/nats"
 	"github.com/nicolai86/sisyphus/storage"
@@ -36,6 +38,10 @@ type repoConfig struct {
 	RepositoryID string
 }
 
+type greenkeepConfig struct {
+	Greenkeep []config `json:"greenkeep"`
+}
+
 func main() {
 	log.Printf("greenkeepr dependency worker running")
 
@@ -47,31 +53,21 @@ func main() {
 	nc = nc1
 
 	nc.Subscribe("greenkeep", func(msg *nats.Msg) {
-		repos, err := fileStorage.Load()
-		if err != nil {
-			log.Fatalf("Failed to read repo storages: %q\n", err)
-		}
-		repoID := string(msg.Data)
 		var r storage.Repository
-		for _, repo := range repos {
-			if repo.ID == repoID {
-				r = repo
-				break
-			}
-		}
+		json.Unmarshal(msg.Data, &r)
 
-		configPath := fmt.Sprintf("%s/%s/%s.json", dataPath, "greenkeep", repoID)
-		if _, err := os.Stat(configPath); err != nil {
-			log.Printf("%q does not exist. skipping", configPath)
-			return
-		}
+		owner := strings.Split(r.FullName, "/")[0]
+		repoName := strings.Split(r.FullName, "/")[1]
+		uri := fmt.Sprintf("https://%s@raw.githubusercontent.com/%s/%s/master/.sisyphus", r.AccessToken, owner, repoName)
+		resp, _ := http.Get(uri)
+		bs, _ := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
 
-		var cs []config
-		f, _ := os.Open(configPath)
-		json.NewDecoder(f).Decode(&cs)
+		var m greenkeepConfig
+		json.Unmarshal(bs, &m)
 
-		for _, c := range cs {
-			log.Printf("fan-out for %q and %q (%q)", repoID, c.Language, c.Path)
+		for _, c := range m.Greenkeep {
+			log.Printf("fan-out for %q and %q (%q)", r.ID, c.Language, c.Path)
 			b, err := json.Marshal(&repoConfig{
 				Config:       c,
 				RepositoryID: r.ID,
