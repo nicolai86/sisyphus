@@ -19,6 +19,10 @@ func NewFileStorage(dataDirectory string) FileStorage {
 }
 
 func (f FileStorage) Store(r Repository) error {
+	if len(r.Plugins) == 0 {
+		return os.Remove(fmt.Sprintf("%s/%s.json", f.DataDirectory, r.ID))
+	}
+
 	file, err := os.OpenFile(
 		fmt.Sprintf("%s/%s.json", f.DataDirectory, r.ID),
 		os.O_RDWR|os.O_CREATE|os.O_TRUNC,
