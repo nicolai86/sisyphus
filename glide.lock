@@ -35,8 +35,6 @@ imports:
   version: 9235644dd9e52eeae6fa48efd539fdc351a0af53
   subpackages:
   - query
-- name: github.com/libgit2/git2go
-  version: 1670c49c7e02ba38aa10072a102a33c3e6d5e1c3
 - name: github.com/Microsoft/go-winio
   version: ce2922f643c8fd76b46cadc7f404a06282678b34
 - name: github.com/nats-io/nats

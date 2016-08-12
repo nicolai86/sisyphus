@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	git "github.com/libgit2/git2go"
 	"github.com/nats-io/nats"
+	"github.com/nicolai86/sisyphus/github/repo"
 	"github.com/nicolai86/sisyphus/storage"
 )
 
@@ -27,88 +27,21 @@ func init() {
 	fileStorage = storage.NewFileStorage(dataPath)
 }
 
-func repoFrom(r storage.Repository) *git.Repository {
-	cloneOptions := &git.CloneOptions{
-		Bare:           false,
-		CheckoutBranch: "master",
-	}
-	cachePath := fmt.Sprintf("/tmp/%s", r.ID)
-	if _, err := os.Stat(cachePath); err != nil {
-		repo, err := git.Clone(r.GitURL, cachePath, cloneOptions)
-		if err != nil {
-			log.Panic(err)
-		}
-		return repo
-	}
-
-	repo, err := git.OpenRepository(cachePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	remote, err := repo.Remotes.Lookup("origin")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := remote.Fetch([]string{}, nil, ""); err != nil {
-		log.Fatal(err)
-	}
-
-	return repo
-}
-
-func fileContent(g *git.Repository, path string) ([]byte, error) {
-	head, err := g.References.Lookup("refs/remotes/origin/master")
-	if err != nil {
-		return nil, err
-	}
-
-	commit, err := g.LookupCommit(head.Target())
-	if err != nil {
-		return nil, err
-	}
-
-	tree, err := commit.Tree()
-	if err != nil {
-		return nil, err
-	}
-
-	t, err := tree.EntryByPath(path)
-	if err != nil {
-		return nil, err
-	}
-
-	if t.Filemode != git.FilemodeBlob {
-		return nil, fmt.Errorf("Not a blob")
-	}
-	blob, err := g.LookupBlob(t.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	return blob.Contents(), nil
-}
-
 func cachePluginSettings(r storage.Repository, plugin string) {
 	log.Printf("caching %q for %s\n", plugin, r.ID)
 
-	var repo = repoFrom(r)
-	defer repo.Free()
+	owner := strings.Split(r.FullName, "/")[0]
+	repoName := strings.Split(r.FullName, "/")[1]
+	tmpDir, _ := repo.Clone(r.AccessToken, owner, repoName)
 
 	pluginCacheDir := fmt.Sprintf("%s/%s", dataPath, plugin)
 	os.MkdirAll(pluginCacheDir, 0700)
 	pluginCache := fmt.Sprintf("%s/%s.json", pluginCacheDir, r.ID)
 
-	bs, err := fileContent(repo, ".sisyphus")
-	if err != nil {
-		log.Printf("Error reading .sisyphus file: %q\n", err)
-		// TODO remove previous cached file
-		return
-	}
+	f, _ := os.Open(fmt.Sprintf("%s/.sisyphus", tmpDir))
 
 	var configs map[string]interface{}
-	json.NewDecoder(strings.NewReader(string(bs))).Decode(&configs)
+	json.NewDecoder(strings.NewReader(string(f))).Decode(&configs)
 
 	f, _ := os.OpenFile(pluginCache, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	json.NewEncoder(f).Encode(configs[plugin])

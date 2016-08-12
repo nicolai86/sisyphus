@@ -14,9 +14,9 @@ import (
 	"github.com/docker/engine-api/types"
 	"github.com/docker/engine-api/types/container"
 	"github.com/google/go-github/github"
-	"github.com/libgit2/git2go"
 	"github.com/nats-io/nats"
 	"github.com/nicolai86/sisyphus/github/pr"
+	"github.com/nicolai86/sisyphus/github/repo"
 	"github.com/nicolai86/sisyphus/storage"
 	"golang.org/x/net/context"
 )
@@ -84,86 +84,22 @@ type repoConfig struct {
 
 var filesToExtract = []string{"package.json"}
 
-func repoFrom(r storage.Repository) *git.Repository {
-	cloneOptions := &git.CloneOptions{
-		Bare:           false,
-		CheckoutBranch: "master",
-	}
-	cachePath := fmt.Sprintf("/tmp/%s", r.ID)
-	if _, err := os.Stat(cachePath); err != nil {
-		repo, err := git.Clone(r.GitURL, cachePath, cloneOptions)
-		if err != nil {
-			log.Panic(err)
-		}
-		return repo
-	}
-
-	repo, err := git.OpenRepository(cachePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	remote, err := repo.Remotes.Lookup("origin")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := remote.Fetch([]string{}, nil, ""); err != nil {
-		log.Fatal(err)
-	}
-
-	return repo
-}
-
-func fileContent(g *git.Repository, path string) ([]byte, error) {
-	head, err := g.References.Lookup("refs/remotes/origin/master")
-	if err != nil {
-		return nil, err
-	}
-
-	commit, err := g.LookupCommit(head.Target())
-	if err != nil {
-		return nil, err
-	}
-
-	tree, err := commit.Tree()
-	if err != nil {
-		return nil, err
-	}
-
-	t, err := tree.EntryByPath(path)
-	if err != nil {
-		return nil, err
-	}
-
-	if t.Filemode != git.FilemodeBlob {
-		return nil, fmt.Errorf("Not a blob")
-	}
-	blob, err := g.LookupBlob(t.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	return blob.Contents(), nil
-}
-
 func checkDependencies(r storage.Repository, c config) {
 	log.Printf("looking for %q (%q): %q", c.Path, c.Language, filesToExtract)
 
-	repo := repoFrom(r)
+	owner := strings.Split(r.FullName, "/")[0]
+	repoName := strings.Split(r.FullName, "/")[1]
+	tmpDir, _ := repo.Clone(r.AccessToken, owner, repoName)
+
 	data := []byte(fmt.Sprintf("%s-%s", c.Path, c.Language))
 	cachePath := fmt.Sprintf("/tmp/build/%s/%x", r.ID, md5.Sum(data))
 	os.MkdirAll(cachePath, 0700)
+
 	for _, file := range filesToExtract {
-		content, err := fileContent(repo, fmt.Sprintf("%s/%s", c.Path, file))
-		if err != nil {
-			panic(err)
-		}
-
-		log.Printf("build %q\n", cachePath)
-		f, err := os.OpenFile(fmt.Sprintf("%s/%s", cachePath, file), os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600)
-		f.Write(content)
-
+		os.Rename(
+			fmt.Sprintf("%s/%s/%s", tmpDir, c.Path, file),
+			fmt.Sprintf("%s/%s", cachePath, file),
+		)
 	}
 
 	runDependencyCheck(r, c, cachePath)
