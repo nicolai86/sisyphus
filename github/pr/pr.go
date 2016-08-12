@@ -3,13 +3,12 @@ package pr
 import (
 	"crypto/md5"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"time"
 
 	"github.com/google/go-github/github"
+	"github.com/nicolai86/sisyphus/github/repo"
 	"golang.org/x/oauth2"
 )
 
@@ -57,32 +56,31 @@ type UpdateFile struct {
 	Destination string
 }
 
-func PublishChanges(accessToken, owner, repo string, updates []UpdateFile) (string, error) {
+func PublishChanges(accessToken, owner, repoName string, updates []UpdateFile) (string, error) {
 	for _, update := range updates {
 		if _, err := os.Stat(update.Source); err != nil {
 			return "", err
 		}
 	}
 
-	dir, err := ioutil.TempDir("", fmt.Sprintf("gh-%s-%s", owner, repo))
-	if err != nil {
-		return "", err
-	}
-
-	cmd := exec.Command("git", "clone", fmt.Sprintf("git://github.com/%s/%s.git", owner, repo), dir, "--depth", "1")
-	cmd.Env = os.Environ()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-
+	dir, _ := repo.Clone(accessToken, owner, repoName)
 	branch := fmt.Sprintf("greenkeep/%x", md5.Sum([]byte(time.Now().String())))
-
-	cmd = exec.Command("git", "checkout", "-b", branch)
-	cmd.Dir = dir
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
+	if err := func() error {
+		cmds := [][]string{
+			[]string{"git", "checkout", "-b", branch},
+		}
+		for _, args := range cmds {
+			cmd := exec.Command(args[0], args[1:]...)
+			cmd.Dir = dir
+			cmd.Env = os.Environ()
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
 		return "", err
 	}
 
@@ -90,7 +88,7 @@ func PublishChanges(accessToken, owner, repo string, updates []UpdateFile) (stri
 		if err := os.Rename(update.Source, fmt.Sprintf("%s/%s", dir, update.Destination)); err != nil {
 			return "", err
 		}
-		cmd = exec.Command("git", "add", fmt.Sprintf("%s/%s", dir, update.Destination))
+		cmd := exec.Command("git", "add", fmt.Sprintf("%s/%s", dir, update.Destination))
 		cmd.Dir = dir
 		cmd.Env = os.Environ()
 		if err := cmd.Run(); err != nil {
@@ -98,26 +96,24 @@ func PublishChanges(accessToken, owner, repo string, updates []UpdateFile) (stri
 		}
 	}
 
-	log.Printf("Creating commit\n")
-	cmd = exec.Command("git", "commit", "-m", "'update dependencies'")
-	cmd.Dir = dir
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-
-	log.Printf("Pushing to remote\n")
-	cmd = exec.Command("git", "push", "-f")
-	cmd.Dir = dir
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-
-	cmd = exec.Command("git", "checkout", "master")
-	cmd.Dir = dir
-	cmd.Env = os.Environ()
-	if err := cmd.Run(); err != nil {
+	if err := func() error {
+		cmds := [][]string{
+			[]string{"git", "commit", "-m", "'update dependencies'"},
+			[]string{"git", "push", "-f", fmt.Sprintf("https://%s@github.com/%s/%s.git", accessToken, owner, repoName)},
+			[]string{"git", "checkout", "master"},
+		}
+		for _, args := range cmds {
+			cmd := exec.Command(args[0], args[1:]...)
+			cmd.Dir = dir
+			cmd.Env = os.Environ()
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
 		return "", err
 	}
 
