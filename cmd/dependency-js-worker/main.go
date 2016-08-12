@@ -29,10 +29,14 @@ var (
 )
 
 func init() {
-	var dataPath string
-	var bucket string
+	var (
+		dataPath      string
+		bucket        string
+		encryptionKey string
+	)
 	flag.StringVar(&dataPath, "data-path", "", "data directory")
 	flag.StringVar(&bucket, "s3-bucket", "", "s3 storage bucket")
+	flag.StringVar(&encryptionKey, "encryption-key", "", "store everything encrypted")
 	flag.StringVar(&natsURL, "nats", "tcp://127.0.0.1:4222", "nats server URL")
 	flag.Parse()
 
@@ -41,6 +45,9 @@ func init() {
 	}
 	if bucket != "" {
 		fileStorage = storage.NewS3Storage(bucket)
+	}
+	if encryptionKey != "" {
+		fileStorage = storage.NewAESStorage(encryptionKey, fileStorage)
 	}
 }
 
