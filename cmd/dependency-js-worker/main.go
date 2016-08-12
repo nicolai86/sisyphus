@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -16,7 +18,6 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/nats-io/nats"
 	"github.com/nicolai86/sisyphus/github/pr"
-	"github.com/nicolai86/sisyphus/github/repo"
 	"github.com/nicolai86/sisyphus/storage"
 	"golang.org/x/net/context"
 )
@@ -89,17 +90,17 @@ func checkDependencies(r storage.Repository, c config) {
 
 	owner := strings.Split(r.FullName, "/")[0]
 	repoName := strings.Split(r.FullName, "/")[1]
-	tmpDir, _ := repo.Clone(r.AccessToken, owner, repoName)
 
 	data := []byte(fmt.Sprintf("%s-%s", c.Path, c.Language))
 	cachePath := fmt.Sprintf("/tmp/build/%s/%x", r.ID, md5.Sum(data))
 	os.MkdirAll(cachePath, 0700)
 
 	for _, file := range filesToExtract {
-		os.Rename(
-			fmt.Sprintf("%s/%s/%s", tmpDir, c.Path, file),
-			fmt.Sprintf("%s/%s", cachePath, file),
-		)
+		uri := fmt.Sprintf("https://%s@raw.githubusercontent.com/%s/%s/master/%s/%s", r.AccessToken, owner, repoName, c.Path, file)
+		resp, _ := http.Get(uri)
+		f, _ := os.OpenFile(fmt.Sprintf("%s/%s", cachePath, file), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+		io.Copy(f, resp.Body)
+		resp.Body.Close()
 	}
 
 	runDependencyCheck(r, c, cachePath)
