@@ -1,6 +1,6 @@
 # sisyphus
 
-get PRs for Node dependencies updates
+get PRs for Ruby & Node dependency updates - for your mono repo.
 
 ## TODO
 
@@ -21,16 +21,13 @@ $ go get github.com/nats-io/gnatsd
 $ gnatsd -D -V
 
 # run server to authorize via github, grant access to repos
-$ go run cmd/server/main.go -template-path $(pwd)/cmd/server/templates -data-path $(pwd)/tmp
-
-# detect .sisyphus file in enabled repos
-$ go run cmd/repos-worker/main.go -data-path=$(pwd)/tmp
+$ go run cmd/frontend/main.go -template-path $(pwd)/cmd/server/templates -data-path $(pwd)/tmp
 
 # run dependency update worker
-$ go run cmd/dependency-worker/main.go -data-path=$(pwd)/tmp
-$ go run cmd/dependency-js-worker/main.go -data-path=$(pwd)/tmp
-$ go run cmd/dependency-rb-worker/parse.go cmd/dependency-rb-worker/main.go -data-path=$(pwd)/tmp
+$ go run cmd/greenkeepr-master/main.go -data-path=$(pwd)/tmp
+$ go run cmd/greenkeepr-javascript/main.go -data-path=$(pwd)/tmp
+$ go run cmd/greenkeepr-ruby/parse.go cmd/dependency-rb-worker/main.go -data-path=$(pwd)/tmp
 
 # run scheduler 
-$ go run cmd/repo-schedule-worker/main.go -data-path=$(pwd)/tmp
+$ go run cmd/repository-scheduler/main.go -data-path=$(pwd)/tmp
 ```

@@ -24,7 +24,7 @@ import (
 
 var (
 	natsURL     string
-	fileStorage storage.RepositoryReader
+	fileStorage storage.RepositoryReaderWriter
 	nc          *nats.Conn
 )
 
@@ -125,7 +125,7 @@ func runDependencyCheck(r storage.Repository, c config, buildPath string) {
 	f, _ := os.OpenFile(fmt.Sprintf("%s/outdated.json", buildPath), os.O_CREATE|os.O_TRUNC, 0600)
 	f.Close()
 
-	cli, err := client.NewClient("unix:///var/run/docker.sock", "v1.22", nil, nil)
+	cli, err := client.NewEnvClient()
 	if err != nil {
 		panic(err)
 	}

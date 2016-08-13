@@ -40,6 +40,11 @@ func extractUpdates(data string) map[string]versionInfo {
 func ParseLog(r io.Reader) logOutput {
 	bs, _ := ioutil.ReadAll(r)
 
+	if string(bs) == "" {
+		return logOutput{
+			Updates: map[string]versionInfo{},
+		}
+	}
 	parts := strings.Split(string(bs), "\n\n")
 
 	return logOutput{

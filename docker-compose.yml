@@ -1,0 +1,65 @@
+version: '2'
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: ./cmd/frontend/Dockerfile
+    command: ./frontend -nats tcp://nats:4222 -template-path=./templates -data-path=./tmp
+    environment:
+      GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID}"
+      GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET}"
+    ports:
+      - 3000:3000
+    volumes:
+      - ./cmd/frontend/templates:/home/sisyphus/templates
+      - ./tmp:/home/sisyphus/tmp
+    links:
+      - nats:nats
+  repository-scheduler:
+    build:
+      context: .
+      dockerfile: ./cmd/repository-scheduler/Dockerfile
+    command: ./repository-scheduler -nats tcp://nats:4222 -data-path=./tmp
+    volumes:
+      - ./tmp:/home/sisyphus/tmp
+    links:
+      - nats:nats
+  greenkeepr-master:
+    build:
+      context: .
+      dockerfile: ./cmd/greenkeepr-master/Dockerfile
+    command: ./greenkeepr-master -nats tcp://nats:4222 -data-path=./tmp
+    volumes:
+      - ./tmp:/home/sisyphus/tmp
+    links:
+      - nats:nats
+  greenkeepr-javascript:
+    build:
+      context: .
+      dockerfile: ./cmd/greenkeepr-javascript/Dockerfile
+    command: ./greenkeepr-javascript -nats tcp://nats:4222 -data-path=./tmp
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+      DOCKER_API_VERSION: v1.24
+    volumes:
+      - ./tmp:/home/sisyphus/tmp:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    links:
+      - nats:nats
+  greenkeepr-ruby:
+    build:
+      context: .
+      dockerfile: ./cmd/greenkeepr-ruby/Dockerfile
+    command: ./greenkeepr-ruby -nats tcp://nats:4222 -data-path=./tmp
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+      DOCKER_API_VERSION: v1.24
+    volumes:
+      - ./tmp:/home/sisyphus/tmp:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    links:
+      - nats:nats
+  nats:
+    image: nats:0.9.2
+    ports:
+      - 4222

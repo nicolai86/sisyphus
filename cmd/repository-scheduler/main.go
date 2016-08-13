@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	fileStorage storage.RepositoryReader
+	fileStorage storage.RepositoryReaderWriter
 	natsURL     string
 )
 
