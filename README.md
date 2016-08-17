@@ -33,6 +33,19 @@ sisyphus web ui:
 }
 ```
 
+## overview
+
+sisyphus is designed to regular check github repositories based on plugin definitions.
+Right now it ships with a single plugin, `greenkeep`, which checks your github
+repository for dependency updates & creates a PR if a new version is available.
+
+it's designed to be mono-repo friendly, and also assumes that you work in a github-flow similar manner:
+master is the source and destination for all PRs.
+
+when a user enables or disables a repository, the accompanied configuration is stored
+in a pluggable configuration backend, which also supports encryption if so desired,
+out of the box.
+
 ## TODO
 
 - [x] automate the workflow, no manual jobs
